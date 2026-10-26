@@ -3,12 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ESP32 IoT Simulator Studio (Tinkercad Style)</title>
+    <title>ESP32 IoT Simulator Studio (Tinkercad Style - Fixed)</title>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: 'Segoe UI', Tahoma, sans-serif; background: #1e1e24; color: #fff; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
         
-        /* 1. แถบเครื่องมือด้านบน (Top Toolbar เหมือน Tinkercad) */
+        /* แถบเครื่องมือด้านบน (Top Toolbar) */
         .tinker-header { background: #2d2d38; height: 55px; border-bottom: 2px solid #3d3d4d; display: flex; justify-content: space-between; align-items: center; padding: 0 20px; flex-shrink: 0; }
         .logo-area { font-weight: bold; font-size: 16px; color: #e17055; display: flex; align-items: center; gap: 8px; }
         .action-controls { display: flex; gap: 12px; }
@@ -20,32 +20,34 @@
         /* พื้นที่จัดสรรหน้าจอหลัก */
         .main-workspace { display: flex; flex: 1; overflow: hidden; position: relative; }
 
-        /* 2. โซนจัดวางวงจรอิเล็กทรอนิกส์กึ่งกลางหน้าจอ (Circuit Canvas Area) */
+        /* โซนจัดวางวงจรอิเล็กทรอนิกส์กึ่งกลางหน้าจอ */
         .circuit-editor { flex: 1; background: #15151c; position: relative; overflow: hidden; display: flex; align-items: center; justify-content: center; }
         #wireCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
-        .mcu-hardware-layout { display: flex; gap: 30px; align-items: center; position: relative; z-index: 2; user-select: none; padding: 20px; }
+        .mcu-hardware-layout { display: flex; gap: 40px; align-items: center; position: relative; z-index: 2; user-select: none; padding: 20px; }
 
         /* การออกแบบตัวกล่องอุปกรณ์และบอร์ดควบคุม */
-        .comp-card { background: #23232e; border: 1px solid #4e4e61; border-radius: 8px; padding: 12px; width: 150px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
-        .esp32-mcu-board { background: #2d3436; border: 3px solid #e17055; border-radius: 8px; padding: 10px; width: 190px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
-        .pin-jack { display: inline-block; width: 12px; height: 12px; border-radius: 50%; background: #576574; border: 2px solid #c8d6e5; cursor: crosshair; transition: 0.2s; }
+        .comp-card { background: #23232e; border: 1px solid #4e4e61; border-radius: 8px; padding: 15px; width: 160px; text-align: center; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+        .esp32-mcu-board { background: #2d3436; border: 3px solid #e17055; border-radius: 8px; padding: 12px; width: 200px; box-shadow: 0 8px 20px rgba(0,0,0,0.5); }
+        .board-title { font-size: 11px; font-weight: bold; color: #e17055; text-align: center; margin-bottom: 8px; letter-spacing: 1px; }
+
+        /* รูพินสำหรับลากสายไฟ */
+        .pin-jack { display: inline-block; width: 14px; height: 14px; border-radius: 50%; background: #576574; border: 2px solid #c8d6e5; cursor: crosshair; transition: 0.2s; }
         .pin-jack:hover { background: #e17055; transform: scale(1.3); }
         .pin-line-item { display: flex; justify-content: space-between; align-items: center; background: #1e272e; padding: 5px 8px; margin: 5px 0; border-radius: 4px; font-family: monospace; font-size: 11px; }
-        .visual-led-bulb { width: 32px; height: 32px; border-radius: 50%; background: #4b5563; margin: 8px auto; transition: 0.3s; }
+        .visual-led-bulb { width: 35px; height: 35px; border-radius: 50%; background: #4b5563; margin: 8px auto; transition: 0.3s; }
         .visual-led-bulb.active { background: #2ecc71; box-shadow: 0 0 15px #2ecc71; }
 
-        /* 3. แถบเขียนโค้ดและแผงจำลองด้านขวามือ (Code & Controls Drawer เหมือน Tinkercad) */
+        /* แถบเขียนโค้ดและแผงจำลองด้านขวามือ */
         .tinker-sidebar-drawer { width: 380px; background: #23232e; border-left: 2px solid #3d3d4d; display: flex; flex-direction: column; flex-shrink: 0; z-index: 10; transition: width 0.3s ease; }
         .tinker-sidebar-drawer.closed { width: 0; overflow: hidden; border-left: none; }
         .panel-section-header { background: #2d2d38; padding: 10px 15px; font-size: 12px; font-weight: bold; color: #a4a4b5; border-bottom: 1px solid #3d3d4d; display: flex; justify-content: space-between; }
         
-        /* คอนเทนเนอร์กล่อง Code Editor */
         .code-input-container { flex: 1; display: flex; flex-direction: column; background: #0c0c0f; padding: 10px; overflow: hidden; }
         .editor-wrapper { flex: 1; display: flex; flex-direction: column; position: relative; overflow: hidden; }
         .code-line-prefix { font-family: monospace; color: #576574; font-size: 13px; line-height: 1.5; padding: 2px 0; }
         .tinker-code-textarea { flex: 1; width: 100%; background: transparent; border: none; color: #39ff14; font-family: monospace; font-size: 13px; line-height: 1.5; resize: none; outline: none; white-space: pre; overflow: auto; padding: 5px; }
         
-        /* กล่องแสดงสถานะดีบั๊กด้านล่างสุด */
+        /* หน้าจอมอนิเตอร์ด้านล่าง */
         .monitor-terminal { height: 110px; background: #15151c; border-top: 2px solid #3d3d4d; padding: 12px; font-size: 12px; font-family: monospace; color: #00a8ff; overflow-y: auto; line-height: 1.5; word-break: break-word; flex-shrink: 0; }
         
         @media (max-width: 800px) {
@@ -56,7 +58,7 @@
 </head>
 <body>
 
-    <!-- 1. แถบเครื่องมือด้านบน (Top Toolbar) -->
+    <!-- 1. แถบเครื่องมือด้านบน -->
     <div class="tinker-header">
         <div class="logo-area">
             <span style="background:#e17055;color:#fff;padding:2px 6px;border-radius:4px;font-size:12px;">ESP32</span>
@@ -76,18 +78,18 @@
             <canvas id="wireCanvas"></canvas>
             
             <div class="mcu-hardware-layout">
-                <!-- ชิ้นส่วน INPUT: เซนเซอร์แสง -->
+                <!-- INPUT: เซนเซอร์ LDR -->
                 <div class="comp-card" id="node-ldr">
                     <strong style="font-size:12px; display:block; margin-bottom:5px;">LDR Sensor</strong>
                     <input type="range" id="ldrSlider" min="0" max="100" value="100" style="width:100%; margin:5px 0;" oninput="triggerSimRealtime()">
                     <span style="font-size:11px;color:#a4a4b5;">ค่าแสง: <span id="luxValText">100</span>%</span>
-                    <div style="margin-top:15px; display:flex; justify-content:center; align-items:center; gap:5px;">
+                    <div style="margin-top:15px; display:flex; justify-content:center; align-items:center; gap:8px;">
                         <span class="pin-jack" id="jack-ldr" data-pin="LDR"></span>
-                        <span style="font-size:10px; color:#747d8c;">Signal</span>
+                        <span style="font-size:11px; color:#747d8c;">Signal</span>
                     </div>
                 </div>
 
-                <!-- ศูนย์กลางบอร์ดควบคุม: ESP32 DEVKIT V1 -->
+                <!-- MCU: บอร์ด ESP32 -->
                 <div class="esp32-mcu-board" id="node-mcu">
                     <div class="board-title">ESP32 DEVKIT V1</div>
                     <div class="pin-line-item">
@@ -100,19 +102,19 @@
                     </div>
                 </div>
 
-                <!-- ชิ้นส่วน OUTPUT: ไฟอัจฉริยะ -->
+                <!-- OUTPUT: หลอด LED -->
                 <div class="comp-card" id="node-led">
                     <strong style="font-size:12px; display:block; margin-bottom:5px;">Smart LED</strong>
                     <div class="visual-led-bulb" id="ledLight"></div>
-                    <div style="margin-top:15px; display:flex; justify-content:center; align-items:center; gap:5px;">
+                    <div style="margin-top:15px; display:flex; justify-content:center; align-items:center; gap:8px;">
                         <span class="pin-jack" id="jack-led" data-pin="LED"></span>
-                        <span style="font-size:10px; color:#747d8c;">Signal</span>
+                        <span style="font-size:11px; color:#747d8c;">Signal</span>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- 3. แถบเขียนโค้ดสไตล์บานเลื่อนด้านขวา -->
+        <!-- 3. แถบเขียนโค้ดและดีบั๊กฝั่งขวา -->
         <div class="tinker-sidebar-drawer" id="codePanel">
             <div class="panel-section-header">
                 <span>CODE EDITOR (ARDUINO C++)</span>
@@ -133,9 +135,8 @@
                 </div>
             </div>
 
-            <!-- หน้าจอคอมไพล์ดีบั๊กด้านล่างสุด -->
             <div class="monitor-terminal" id="terminalMonitor">
-                [System] Simulator initialized. คลิกค้างลากเส้นสายไฟจากขาอุปกรณ์เชื่อมเข้ากับบอร์ด ESP32 เพื่อเริ่มทดลองวงจรวงจร (คลิกขวาที่บอร์ดเพื่อลบสายล่าสุดออก)
+                [System] Simulator initialized. คลิกค้างลากเส้นสายไฟจากขาอุปกรณ์เชื่อมเข้ากับบอร์ด ESP32 เพื่อเริ่มทดลองวงจร (คลิกขวาที่บอร์ดเพื่อลบสายล่าสุดออก)
             </div>
         </div>
 
@@ -155,7 +156,7 @@
 
     function toggleCodePanel() {
         document.getElementById('codePanel').classList.toggle('closed');
-        setTimeout(drawWires, 310); // รออนิเมชันสไลด์แถบข้างเสร็จเพื่อวาดพิกัดสายไฟใหม่ให้เป๊ะ
+        setTimeout(drawWires, 350); 
     }
 
     function toggleSimulation() {
@@ -165,16 +166,15 @@
             simBtn.classList.add('running');
             executeSimulationEngine();
         } else {
-    simBtn.innerText = "▶ Start Simulation";
-simBtn.classList.remove('running');
-document.getElementById('ledLight').classList.remove('active');
-document.getElementById('terminalMonitor').innerText = "[System] Simulation stopped. ระบบตัดกระแสไฟฟ้าไฟจำลองเรียบร้อยแล้ว";
+            simBtn.innerText = "▶ Start Simulation";
+            simBtn.classList.remove('running');
+    document.getElementById('ledLight').classList.remove('active');
+document.getElementById('terminalMonitor').innerText = "[System] Simulation stopped. ระบบตัดกระแสไฟฟ้าจำลองเรียบร้อยแล้ว";
 }
 }
 function triggerSimRealtime() {
 if (isRunning) executeSimulationEngine();
 }
-// คำนวณหาตำแหน่งตรงกลางของช่องเสียบสายพิน
 function getJackCenter(jackId) {
 const jack = document.getElementById(jackId);
 const jRect = jack.getBoundingClientRect();
@@ -202,6 +202,8 @@ ctx.bezierCurveTo(start.x, start.y + 40, mousePos.x, mousePos.y - 40, mousePos.x
 ctx.strokeStyle = '#ff9f43'; ctx.lineWidth = 3; ctx.stroke();
 }
 }
+// เพิ่มการดักจับเหตุการณ์เมาส์ที่ครอบคลุมขึ้น
+function initJacks() {
 circuitEditor.querySelectorAll('.pin-jack').forEach(jack => {
 jack.addEventListener('mousedown', (e) => {
 e.preventDefault();
@@ -212,6 +214,7 @@ mousePos = { x: e.clientX - rect.left, y: e.clientY - rect.top };
 drawWires();
 });
 });
+}
 circuitEditor.addEventListener('mousemove', (e) => {
 if (!isDrawing) return;
 const rect = circuitEditor.getBoundingClientRect();
@@ -222,7 +225,7 @@ window.addEventListener('mouseup', (e) => {
 if (!isDrawing) return;
 isDrawing = false;
 const target = e.target;
-if (target.classList.contains('pin-jack') && target !== startJack) {
+if (target && target.classList.contains('pin-jack') && target !== startJack) {
 connections = connections.filter(c => c.from !== startJack.id && c.to !== startJack.id && c.from !== target.id && c.to !== target.id);
 const wireColors = ['#e74c3c', '#3498db', '#2ecc71', '#f1c40f'];
 const assignedColor = wireColors[connections.length % wireColors.length];
@@ -241,21 +244,23 @@ triggerSimRealtime();
 }
 });
 function isWired(pinA, pinB) {
-return connections.some(c =>
-(document.getElementById(c.from).dataset.pin === pinA && document.getElementById(c.to).dataset.pin === pinB) ||
-(document.getElementById(c.from).dataset.pin === pinB && document.getElementById(c.to).dataset.pin === pinA)
-);
+return connections.some(c => {
+const elFrom = document.getElementById(c.from);
+const elTo = document.getElementById(c.to);
+if (!elFrom || !elTo) return false;
+return (elFrom.dataset.pin === pinA && elTo.dataset.pin === pinB) ||
+(elFrom.dataset.pin === pinB && elTo.dataset.pin === pinA);
+});
 }
-// ตัวประมวลผลตรรกะระบบแบบจำลองฮาร์ดแวร์หลังบ้าน
 function executeSimulationEngine() {
 const lux = parseInt(document.getElementById('ldrSlider').value);
-document.getElementById('luxText = luxValText').innerText = lux;
+document.getElementById('luxValText').innerText = lux; // แก้ไขจุดที่ผิดพลาดตรงนี้แล้ว
 const terminal = document.getElementById('terminalMonitor');
 const ledBulb = document.getElementById('ledLight');
 const ldrCircuitOK = isWired('LDR', 'VP');
 const ledCircuitOK = isWired('LED', 'G2');
 if (!ldrCircuitOK || !ledCircuitOK) {
-terminal.innerText = "🔌 [Hardware Error] การเดินกระแสไฟฟ้าล้มเหลว วงจรอิเล็กทรอนิกส์ยังต่อไม่ครบสมบูรณ์ กรุณาลากสายเชื่อมคู่ขาพินให้ถูกต้อง (LDR ➡️ พิน VP และ LED ➡️ พิน G2)";
+terminal.innerText = "🔌 [Hardware Error] วงจรอิเล็กทรอนิกส์ไม่ครบ กรุณาลากสายเชื่อมคู่ขาพินให้ถูกต้อง (LDR ➡️ พิน VP และ LED ➡️ พิน G2)";
 ledBulb.classList.remove('active');
 return;
 }
@@ -276,14 +281,14 @@ if (lux < 60) ledStatus = true;
 }
 if (ledStatus) {
 ledBulb.classList.add('active');
-terminal.innerText = 📟 [ESP32 Serial Monitor] val = ${lux} (Read A0/GPIO36) | สถานะสัญญาณขาเอาต์พุต GPIO2 พล็อตสภาวะกระแสไฟเท่ากับ HIGH (เปิดหลอดไฟสำเร็จ);
+terminal.innerText = 📟 [ESP32 Serial Monitor] val = ${lux} (Read VP/GPIO36) | สถานะสัญญาณขาเอาต์พุต GPIO2 มีสถานะกระแสไฟเท่ากับ HIGH (เปิดหลอดไฟสำเร็จ);
 } else {
 ledBulb.classList.remove('active');
-terminal.innerText = 📟 [ESP32 Serial Monitor] val = ${lux} (Read A0/GPIO36) | สภาวะตรรกะไม่ตรงตามเงื่อนไข สัญญาณขาเอาต์พุต GPIO2 พล็อตสภาวะกระแสไฟเท่ากับ LOW (ปิดไฟ);
+terminal.innerText = 📟 [ESP32 Serial Monitor] val = ${lux} (Read VP/GPIO36) | สภาวะตรรกะไม่ตรงตามเงื่อนไข สัญญาณขาเอาต์พุต GPIO2 มีสถานะกระแสไฟเท่ากับ LOW (ปิดไฟ);
 }
 } catch (err) {
-terminal.innerText = "⚠️ [Compiler Error] ตัวแปรไวยากรณ์โค้ด C++ ที่ระบุภายในฟังก์ชัน loop() มีเครื่องหมายหรือตัวสะกดผิดพลาด โปรดแก้ไขความถูกต้องของตัวแปร";
+terminal.innerText = "⚠️ [Compiler Error] โค้ด C++ ที่ระบุภายในฟังก์ชัน loop() มีข้อผิดพลาด โปรดตรวจสอบความถูกต้อง";
 }
 }
-window.addEventListener('load', () => { drawWires(); triggerSimRealtime(); });
+window.addEventListener('load', () => { initJacks(); drawWires(); });
 window.addEventListener('resize', drawWires);
