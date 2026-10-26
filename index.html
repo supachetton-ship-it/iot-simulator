@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IoT Simulator</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: sans-serif; background: #1a1a24; color: #fff; padding: 15px; display: flex; justify-content: center; min-height: 100vh; }
+        .app-container { display: flex; flex-direction: row; flex-wrap: wrap; gap: 20px; width: 100%; max-width: 1000px; background: #23232e; padding: 20px; border-radius: 16px; }
+        .instruction-panel { background: #1e1e26; border: 1px solid #3d3d4d; border-radius: 12px; padding: 20px; flex: 1 1 280px; display: flex; flex-direction: column; justify-content: space-between; }
+        .workspace-panel { flex: 2 1 500px; display: flex; flex-direction: column; gap: 20px; width: 100%; }
+        .hardware-zone { background: #15151c; border: 1px solid #3d3d4d; border-radius: 12px; padding: 15px; position: relative; min-height: 240px; }
+        .mcu-and-io { display: flex; justify-content: space-between; align-items: center; position: relative; z-index: 2; gap: 10px; }
+        .component-box { background: #23232e; border: 1px solid #4e4e61; border-radius: 8px; padding: 10px; width: 30%; min-width: 100px; font-size: 11px; text-align: center; }
+        .controller-board { background: #0d1b2a; border: 2px solid #00a8ff; border-radius: 8px; padding: 10px; width: 35%; }
+        .pin-node { display: flex; justify-content: space-between; background: #1b263b; padding: 4px 8px; margin: 5px 0; border-radius: 4px; font-family: monospace; font-size: 11px; }
+        .led { width: 30px; height: 30px; border-radius: 50%; background: #4b5563; margin: 8px auto; transition: 0.3s; }
+        .led.active { background: #f1c40f; box-shadow: 0 0 15px #f1c40f; }
+        select { width: 100%; margin-top: 5px; background: #1a1a24; color: white; border: 1px solid #4e4e61; padding: 2px; border-radius: 4px; font-size: 11px; }
+        #wireCanvas { position: absolute; top: 0; left: 0; width: 100%; height: 100%; z-index: 1; pointer-events: none; }
+        .code-zone { background: #1a1a24; padding: 15px; border-radius: 12px; border: 1px solid #3d3d4d; }
+        .code-editor { background: #0c0c0f; font-family: monospace; padding: 12px; border-radius: 6px; border-left: 4px solid #2ecc71; color: #39ff14; line-height: 1.6; font-size: 13px; white-space: pre-wrap; word-break: break-word; }
+        .code-input { background: #23232e; border: 1px dashed #39ff14; color: #fff; width: 50px; text-align: center; font-size: 13px; border-radius: 4px; font-weight: bold; }
+        .btn-check { background: #2ecc71; color: white; border: none; padding: 12px; font-size: 15px; font-weight: bold; border-radius: 8px; cursor: pointer; width: 100%; box-shadow: 0 4px #27ae60; margin-top: 15px; }
+        .status-box { background: #1c1c24; padding: 10px; border-radius: 6px; font-size: 12px; margin-top: 10px; border-left: 4px solid #e74c3c; }
+        @media (max-width: 550px) { .mcu-and-io { flex-direction: column; } .component-box, .controller-board { width: 100%; } .hardware-zone { min-height: 450px; } }
+    </style>
+</head>
+<body>
+<div class="app-container">
+    <div class="instruction-panel">
+        <div>
+            <h4 style="color:#e67e22;">ภารกิจที่ 1</h4>
+            <h3 style="margin:5px 0;">ไฟถนนอัจฉริยะ</h3>
+            <p>ต่อสายวงจรให้ถูกต้อง และแก้โค้ดให้เปิดไฟเมื่อแสงต่ำกว่า 60%</p>
+            <ol style="margin-top:10px; padding-left:15px;">
+                <li>ต่อ LDR -> A0</li>
+                <li>ต่อ LED -> D2</li>
+                <li>แก้เลขในโค้ดเป็น 60</li>
+            </ol>
+        </div>
+        <button class="btn-check" onclick="checkMissionAnswer()">✅ ส่งตรวจคำตอบ</button>
+    </div>
+    <div class="workspace-panel">
+        <div class="hardware-zone">
+            <canvas id="wireCanvas"></canvas>
+            <div class="mcu-and-io">
+                <div class="component-box" id="node-ldr">
+                    <strong>LDR (เซนเซอร์แสง)</strong>
+                    <input type="range" id="ldrSlider" min="0" max="100" value="100" style="width:100%; margin:5px 0;">
+                    ค่า: <span id="luxText">100</span>%
+                    <select id="pin-ldr" onchange="drawWires(); runSimulation();">
+                        <option value="">--เลือกพิน--</option>
+                        <option value="A0">A0 (Analog)</option>
+                        <option value="D2">D2 (Digital)</option>
+                    </select>
+                </div>
+                <div class="controller-board" id="node-mcu">
+                    <div style="font-size:10px; text-align:center; color:#00a8ff; font-weight:bold;">MCU BOARD</div>
+                    <div class="pin-node"><span>A0</span><span style="color:#2ecc71;">●</span></div>
+                    <div class="pin-node"><span>D2</span><span style="color:#e74c3c;">●</span></div>
+                </div>
+                <div class="component-box" id="node-led">
+                    <strong>Street LED (ไฟถนน)</strong>
+                    <div class="led" id="ledLight"></div>
+                    <select id="pin-led" onchange="drawWires(); runSimulation();">
+                        <option value="">--เลือกพิน--</option>
+                        <option value="A0">A0 (Analog)</option>
+                        <option value="D2">D2 (Digital)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+        <div class="code-zone">
+            <div class="code-editor">void loop() {
+  int light = analogRead(A0);
+  if (light &lt; <input type="number" id="codeLuxLimit" class="code-input" value="40" min="0" max="100">) {
+    digitalWrite(D2, HIGH);
+  } else {
+    digitalWrite(D2, LOW);
+  }
+}</div>
+            <div class="status-box" id="systemStatus">🔍 สถานะระบบ: รอการต่อวงจร...</div>
+        </div>
+    </div>
+</div>
+<script>
+    function runSimulation() {
+        const lux = parseInt(document.getElementById('ldrSlider').value);
+        document.getElementById('luxText').innerText = lux;
+        const pLdr = document.getElementById('pin-ldr').value;
+        const pLed = document.getElementById('pin-led').value;
+        const limit = parseInt(document.getElementById('codeLuxLimit').value) || 0;
+        const status = document.getElementById('systemStatus');
+        if (pLdr !== "A0" || pLed !== "D2") {
+            status.innerText = "❌ วงจรไม่สมบูรณ์: กรุณาต่อพินให้ถูกต้องตามคำแนะนำ";
+            document.getElementById('ledLight').classList.remove('active');
+            return;
+        }
+        if (lux < limit) {
+            document.getElementById('ledLight').classList.add('active');
+            status.innerText = `🟢 ไฟเปิด: แสง (${lux}%) ต่ำกว่าเกณฑ์ (${limit}%)`;
+        } else {
+            document.getElementById('ledLight').classList.remove('active');
+            status.innerText = `🟢 ไฟปิด: แสนสว่างพอ (${lux}%)`;
+        }
+    }
+    function checkMissionAnswer() {
+        const pLdr = document.getElementById('pin-ldr').value;
+        const pLed = document.getElementById('pin-led').value;
+        const limit = parseInt(document.getElementById('codeLuxLimit').value) || 0;
+        if (pLdr === "A0" && pLed === "D2" && limit === 60) {
+            alert("🎉 ยินดีด้วย! คุณผ่านภารกิจระบบไฟถนนอัจฉริยะแล้ว!");
+        } else {
+            alert("ยังไม่ถูกต้อง ลองเช็กการต่อพินหรือตัวเลขเกณฑ์แสงในโค้ดอีกครั้งนะ");
+        }
+    }
+    function drawWires() {
+        const canvas = document.getElementById('wireCanvas');
+        const ctx = canvas.getContext('2d');
+        const zone = document.querySelector('.hardware-zone');
+        canvas.width = zone.clientWidth; canvas.height = zone.clientHeight;
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        const mcu = document.getElementById('node-mcu');
+        const zoneRect = zone.getBoundingClientRect(); const mcuRect = mcu.getBoundingClientRect();
+        const mcuX = mcuRect.left - zoneRect.left; const mcuY = mcuRect.top - zoneRect.top;
+        const pinPositions = { "A0": { x: mcuX + 10, y: mcuY + 26 }, "D2": { x: mcuX + mcuRect.width - 10, y: mcuY + 46 } };
+        function drawSingleWire(fromNodeId, selectedPin, color) {
+            if (!selectedPin || !pinPositions[selectedPin]) return;
+            const el = document.getElementById(fromNodeId); const elRect = el.getBoundingClientRect();
+            const startX = (elRect.left - zoneRect.left) + (elRect.width / 2);
+            const startY = (elRect.top - zoneRect.top) + (elRect.height / 2);
+            const endX = pinPositions[selectedPin].x; const endY = pinPositions[selectedPin].y;
+            ctx.beginPath(); ctx.moveTo(startX, startY); ctx.bezierCurveTo(startX, startY + 30, endX, endY - 30, endX, endY);
+            ctx.strokeStyle = color; ctx.lineWidth = 3; ctx.stroke();
+        }
+        drawSingleWire('node-ldr', document.getElementById('pin-ldr').value, '#2ecc71');
+        drawSingleWire('node-led', document.getElementById('pin-led').value, '#e74c3c');
+    }
+    document.getElementById('ldrSlider').addEventListener('input', runSimulation);
+    document.getElementById('codeLuxLimit').addEventListener('input', runSimulation);
+    window.addEventListener('load', () => { drawWires(); runSimulation(); });
+    window.addEventListener('resize', drawWires);
+</script>
+</body>
+</html>
